@@ -33,6 +33,7 @@ from gui.guibase import GUIBase
 from gui.guiutils import ColorBar
 from gui.colordefs import ColorScaleInferno
 from gui.colordefs import QudiPalettePale as palette
+from gui.mycolordefs import ColorScaleNanoscan
 from gui.fitsettings import FitParametersWidget
 from qtpy import QtCore
 from qtpy import QtGui
@@ -566,7 +567,8 @@ class ConfocalGui(GUIBase):
         #           Connect the colorbar and their actions              #
         #################################################################
         # Get the colorscale and set the LUTs
-        self.my_colors = ColorScaleInferno()
+        # self.my_colors = ColorScaleInferno()
+        self.my_colors = ColorScaleNanoscan()
 
         self.xy_image.setLookupTable(self.my_colors.lut)
         self.depth_image.setLookupTable(self.my_colors.lut)
