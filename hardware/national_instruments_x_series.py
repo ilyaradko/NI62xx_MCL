@@ -1243,7 +1243,7 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
     def scan_line(self, line_path=None, pixel_clock=False):
         """ Scans a line and return the counts on that line.
 
-        @param float[c][m] line_path: array of c-tuples defining the voltage points
+        @param float[c][m] line_path: array of c-tuples defining the coordinate points
             (m = samples per line)
         @param bool pixel_clock: whether we need to output a pixel clock for this line
 

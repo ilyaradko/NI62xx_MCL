@@ -32,8 +32,8 @@ from qtwidgets.scan_plotwidget import ScanImageItem
 from gui.guibase import GUIBase
 from gui.guiutils import ColorBar
 from gui.colordefs import ColorScaleInferno
-from gui.colordefs import QudiPalettePale as palette
 from gui.mycolordefs import ColorScaleNanoscan
+from gui.colordefs import QudiPalettePale as palette
 from gui.fitsettings import FitParametersWidget
 from qtpy import QtCore
 from qtpy import QtGui
@@ -406,6 +406,11 @@ class ConfocalGui(GUIBase):
             delay=0.1,
             slot=self.continue_xy_scan_clicked
             )
+        self._scan_3d_start_proxy = pg.SignalProxy(
+            self._mw.action_scan_3d_start.triggered,
+            delay=0.1,
+            slot=self.button3d_scan_clicked
+            )
         self._scan_depth_start_proxy = pg.SignalProxy(
             self._mw.action_scan_depth_start.triggered,
             delay=0.1,
@@ -567,7 +572,7 @@ class ConfocalGui(GUIBase):
         #           Connect the colorbar and their actions              #
         #################################################################
         # Get the colorscale and set the LUTs
-        # self.my_colors = ColorScaleInferno()
+        #self.my_colors = ColorScaleInferno()
         self.my_colors = ColorScaleNanoscan()
 
         self.xy_image.setLookupTable(self.my_colors.lut)
@@ -779,6 +784,7 @@ class ConfocalGui(GUIBase):
         # Disable the start scan buttons
         self._mw.action_scan_xy_start.setEnabled(False)
         self._mw.action_scan_depth_start.setEnabled(False)
+        self._mw.action_scan_3d_start.setEnabled(False)
 
         self._mw.action_scan_xy_resume.setEnabled(False)
         self._mw.action_scan_depth_resume.setEnabled(False)
@@ -811,6 +817,7 @@ class ConfocalGui(GUIBase):
         # Enable the scan buttons
         self._mw.action_scan_xy_start.setEnabled(True)
         self._mw.action_scan_depth_start.setEnabled(True)
+        self._mw.action_scan_3d_start.setEnabled(True)
 #        self._mw.actionRotated_depth_scan.setEnabled(True)
 
         self._mw.action_optimize_position.setEnabled(True)
@@ -978,6 +985,11 @@ class ConfocalGui(GUIBase):
         """ Continue xy scan. """
         self.disable_scan_actions()
         self._scanning_logic.continue_scanning(zscan=False, tag='gui')
+
+    def button3d_scan_clicked(self):
+        """ Start a 3D scan when button is clicked. """
+        self.disable_scan_actions()
+        self._scanning_logic.start_scanning(zscan=False, tag='3D')
 
     def continue_depth_scan_clicked(self):
         """ Continue depth scan. """

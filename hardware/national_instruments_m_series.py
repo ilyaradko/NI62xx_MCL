@@ -188,14 +188,11 @@ class NationalInstrumentsMSeries(NationalInstrumentsXSeries):
         @return int: error code (0:OK, -1:error)
         """
 
-        if not scanner and self._clock_daq_task is not None:
-            self.log.error('Another counter clock is already running, close this one first.')
+        # In M-series NI cards, there are only two counter,
+        # which prohibits running simultaneously a counter and a scanner
+        if self._clock_daq_task is not None or self._scanner_clock_daq_task is not None:
+            self.log.error('Another counting task (counter or scanner) is already running. Close that one first.')
             return -1
-
-        if scanner and self._scanner_clock_daq_task is not None:
-            self.log.error('Another scanner clock is already running, close this one first.')
-            return -1
-
 
         # assign the clock frequency, if given
         if clock_frequency is not None:
