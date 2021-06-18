@@ -31,8 +31,7 @@ from core.statusvariable import StatusVar
 from qtwidgets.scan_plotwidget import ScanImageItem
 from gui.guibase import GUIBase
 from gui.guiutils import ColorBar
-from gui.colordefs import ColorScaleInferno
-from gui.mycolordefs import ColorScaleNanoscan
+from gui.colormaplist import *
 from gui.colordefs import QudiPalettePale as palette
 from gui.fitsettings import FitParametersWidget
 from qtpy import QtCore
@@ -285,6 +284,12 @@ class ConfocalGui(GUIBase):
             self._mw.xy_channel_ComboBox.addItem(str(ch), n)
 
         self._mw.xy_channel_ComboBox.activated.connect(self.update_xy_channel)
+
+        # Set up and connect xy colorscale combobox
+        for n, ch in enumerate(ListColorScale.cs_names):
+            self._mw.xy_colorscale_ComboBox.addItem(str(ch), n)
+
+        self._mw.xy_colorscale_ComboBox.activated.connect(self.update_xy_colorscale)
 
         # Create crosshair for depth image:
         self._mw.depth_ViewWidget.toggle_crosshair(True, movable=True)
@@ -572,8 +577,7 @@ class ConfocalGui(GUIBase):
         #           Connect the colorbar and their actions              #
         #################################################################
         # Get the colorscale and set the LUTs
-        #self.my_colors = ColorScaleInferno()
-        self.my_colors = ColorScaleNanoscan()
+        self.my_colors = ColorScaleInferno()
 
         self.xy_image.setLookupTable(self.my_colors.lut)
         self.depth_image.setLookupTable(self.my_colors.lut)
@@ -1350,6 +1354,14 @@ class ConfocalGui(GUIBase):
         self.xy_channel = int(self._mw.xy_channel_ComboBox.itemData(index, QtCore.Qt.UserRole))
         self.refresh_xy_image()
 
+    def update_xy_colorscale(self, index):
+        """ The colorscale for showing XY scan image was changed. Refresh the displayed image.
+
+            @param index int: index of selected colorscale item in ComboBox
+        """
+        self.xy_cs_index = int(self._mw.xy_colorscale_ComboBox.itemData(index, QtCore.Qt.UserRole))
+        self.refresh_xy_colorscale()
+
     def update_depth_channel(self, index):
         """ The displayed channel for the X-depth image was changed, refresh the displayed image.
 
@@ -1409,6 +1421,37 @@ class ConfocalGui(GUIBase):
         # Unlock state widget if scan is finished
         if self._scanning_logic.module_state() != 'locked':
             self.enable_scan_actions()
+
+    def refresh_xy_colorscale(self):
+        """ Update all images and colorbars with the selected colorscale."""
+
+        # Get the colorscale and set the LUTs
+        # Get color scale class name from index
+        cs_class_name = ListColorScale.cs_classes[self.xy_cs_index]
+        # Call a class object by its name
+        self.my_colors = ListColorScale.cs_dict[cs_class_name]()
+
+        self.xy_image.setLookupTable(self.my_colors.lut)
+        self.depth_image.setLookupTable(self.my_colors.lut)
+        self.xy_refocus_image.setLookupTable(self.my_colors.lut)
+
+        # Create colorbars and add them at the desired place in the GUI. Add
+        # also units to the colorbar.
+
+        self.xy_cb = ColorBar(self.my_colors.cmap_normed, width=100, cb_min=0, cb_max=100)
+        self.depth_cb = ColorBar(self.my_colors.cmap_normed, width=100, cb_min=0, cb_max=100)
+        self._mw.xy_cb_ViewWidget.addItem(self.xy_cb)
+        self._mw.xy_cb_ViewWidget.hideAxis('bottom')
+        self._mw.xy_cb_ViewWidget.setLabel('left', 'Fluorescence', units='c/s')
+        self._mw.xy_cb_ViewWidget.setMouseEnabled(x=False, y=False)
+
+        self._mw.depth_cb_ViewWidget.addItem(self.depth_cb)
+        self._mw.depth_cb_ViewWidget.hideAxis('bottom')
+        self._mw.depth_cb_ViewWidget.setLabel('left', 'Fluorescence', units='c/s')
+        self._mw.depth_cb_ViewWidget.setMouseEnabled(x=False, y=False)
+
+        self.refresh_xy_colorbar()
+        self.refresh_depth_colorbar()
 
     def refresh_depth_image(self):
         """ Update the current Depth image from the logic.
