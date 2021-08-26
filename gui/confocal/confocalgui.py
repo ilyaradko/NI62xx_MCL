@@ -1425,30 +1425,22 @@ class ConfocalGui(GUIBase):
     def refresh_xy_colorscale(self):
         """ Update all images and colorbars with the selected colorscale."""
 
-        # Get the colorscale and set the LUTs
+        #### Get the colorscale and set the LUTs
         # Get color scale class name from index
         cs_class_name = ListColorScale.cs_classes[self.xy_cs_index]
-        # Call a class object by its name
+        # Call a class object by its string name
         self.my_colors = ListColorScale.cs_dict[cs_class_name]()
 
+        #### Update all visual elements with new colors
+        # Images
         self.xy_image.setLookupTable(self.my_colors.lut)
         self.depth_image.setLookupTable(self.my_colors.lut)
         self.xy_refocus_image.setLookupTable(self.my_colors.lut)
-
-        # Create colorbars and add them at the desired place in the GUI. Add
-        # also units to the colorbar.
-
-        self.xy_cb = ColorBar(self.my_colors.cmap_normed, width=100, cb_min=0, cb_max=100)
-        self.depth_cb = ColorBar(self.my_colors.cmap_normed, width=100, cb_min=0, cb_max=100)
-        self._mw.xy_cb_ViewWidget.addItem(self.xy_cb)
-        self._mw.xy_cb_ViewWidget.hideAxis('bottom')
-        self._mw.xy_cb_ViewWidget.setLabel('left', 'Fluorescence', units='c/s')
-        self._mw.xy_cb_ViewWidget.setMouseEnabled(x=False, y=False)
-
-        self._mw.depth_cb_ViewWidget.addItem(self.depth_cb)
-        self._mw.depth_cb_ViewWidget.hideAxis('bottom')
-        self._mw.depth_cb_ViewWidget.setLabel('left', 'Fluorescence', units='c/s')
-        self._mw.depth_cb_ViewWidget.setMouseEnabled(x=False, y=False)
+        # Colorbars
+        self.xy_cb.stops, self.xy_cb.colors = self.my_colors.cmap_normed.getStops('float')
+        self.xy_cb.stops = (self.xy_cb.stops - self.xy_cb.stops.min()) / self.xy_cb.stops.ptp()
+        self.depth_cb.stops, self.depth_cb.colors = self.my_colors.cmap_normed.getStops('float')
+        self.depth_cb.stops = (self.depth_cb.stops - self.depth_cb.stops.min()) / self.depth_cb.stops.ptp()
 
         self.refresh_xy_colorbar()
         self.refresh_depth_colorbar()
