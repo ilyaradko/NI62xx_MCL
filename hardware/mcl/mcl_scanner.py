@@ -205,6 +205,9 @@ class MCLScanner(Base, EmptyInterface):
         """ Release MCL piezo controller, so that other programs can access it.
         """
         if self._piezo is not None:
+            # Move to zero position for piezo safety
+            for i in range(self._n_axes):
+                self._piezo.singleWrite(position=0, axis=i+1)
             self._piezo.close()
             self._piezo = None
             self._activated = False
