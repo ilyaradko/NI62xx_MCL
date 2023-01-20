@@ -100,7 +100,7 @@ class MicrowaveSynthHDPro(Base, MicrowaveInterface):
 
         limits.list_minstep = 0.01
         limits.list_maxstep = 14e9
-        limits.list_maxentries = 100
+        limits.list_maxentries = 1000 # No limit if listing is done in software
 
         limits.sweep_minstep = 0.01
         limits.sweep_maxstep = 14e9
@@ -156,9 +156,8 @@ class MicrowaveSynthHDPro(Base, MicrowaveInterface):
         """
         Gets the frequency of the microwave output.
         Returns single float value if the device is in cw mode.
-        Returns list if the device is in either list or sweep mode.
-
-        @return [float, list]: frequency(s) currently set for this device in Hz
+        Returns list like [start, stop, step] if the device is in sweep mode.
+        Returns list of frequencies if the device is in list mode.
         """
         if self.current_output_mode == MicrowaveMode.CW:
             # query frequency
@@ -195,27 +194,28 @@ class MicrowaveSynthHDPro(Base, MicrowaveInterface):
         """
         self.current_output_mode = MicrowaveMode.CW
 
-        self._conn.write('X0')
-        self._conn.write('c1')
+        # Not needed as List/Sweep modes are buggy in SynthHD
+        #self._conn.write('X0')
+        #self._conn.write('c1')
 
-        # trigger mode: software
+        # trigger mode: software (i.e., no trigger)
         self._conn.write('w0')
 
         # sweep frequency and steps
 
         if frequency is not None:
-            self._conn.write('f{0:5.7f}'.format(frequency / 1e6))
             self._conn.write('l{0:5.7f}'.format(frequency / 1e6))
             self._conn.write('u{0:5.7f}'.format(frequency / 1e6))
+            self._conn.write('f{0:5.7f}'.format(frequency / 1e6))
         if power is not None:
-            self._conn.write('W{0:2.3f}'.format(power))
             self._conn.write('[{0:2.3f}'.format(power))
             self._conn.write(']{0:2.3f}'.format(power))
+            self._conn.write('W{0:2.3f}'.format(power))
 
-        mw_cw_freq = float(self._conn.query('f?')) * 1e6
-        mw_cw_power = float(self._conn.query('W?'))
-        self.log.debug('CW f: {0} {2} P: {1} {3}'.format(frequency, power, mw_cw_freq, mw_cw_power))
-        return mw_cw_freq, mw_cw_power, 'cw'
+        self.mw_cw_freq = float(self._conn.query('f?')) * 1e6
+        self.mw_cw_power = float(self._conn.query('W?'))
+        self.log.debug('CW f: {0} {2} P: {1} {3}'.format(frequency, power, self.mw_cw_freq, self.mw_cw_power))
+        return self.mw_cw_freq, self.mw_cw_power, 'cw'
 
     def list_on(self):
         """
@@ -227,7 +227,8 @@ class MicrowaveSynthHDPro(Base, MicrowaveInterface):
         self.current_output_mode = MicrowaveMode.LIST
         time.sleep(1)
         self.output_active = True
-        self.log.warn('MicrowaveDummy>List mode output on')
+        self._on()
+        self.log.info('List mode output on')
         return 0
 
     def set_list(self, frequency=None, power=None):
@@ -239,15 +240,20 @@ class MicrowaveSynthHDPro(Base, MicrowaveInterface):
 
         @return list, float, str: current frequencies in Hz, current power in dBm, current mode
         """
-        self.log.debug('MicrowaveDummy>set_list, frequency_list: {0}, power: {1:f}'
+        self.log.debug('Set_list, frequency_list: {0}, power: {1:f}'
                        ''.format(frequency, power))
         self.output_active = False
         self.current_output_mode = MicrowaveMode.LIST
         if frequency is not None:
+            # Save the list and set the first frequency in the list
             self.mw_frequency_list = frequency
+            # Pointer to the current frequency in the list. Start with -1 to obtain 0 after trigger()
+            self.freq_ptr = -1
+            self._conn.write(f'f{frequency[0]/1e6:.7f}')
         if power is not None:
-            # set power
-            self._conn.write('W{0:2.3f}'.format(power))
+            # Set the power
+            self._conn.write(f'W{power:.3f}')
+            self.mw_cw_power = float(self._conn.query('W?'))
         return self.mw_frequency_list, self.mw_cw_power, 'list'
 
     def reset_listpos(self):
@@ -256,7 +262,10 @@ class MicrowaveSynthHDPro(Base, MicrowaveInterface):
 
         @return int: error code (0:OK, -1:error)
         """
-        self._conn.write('g1')  # enable sweep mode and set to start frequency
+        # Pointer to the current frequency in the list. Start with -1 to obtain 0 after trigger()
+        self.freq_ptr = -1
+        # List mode is buggy in WindFreak - don't do it in hardware!
+        #self._conn.write('g1')  # enable sweep mode and set to start frequency
         return 0
 
     def sweep_on(self):
@@ -359,13 +368,20 @@ class MicrowaveSynthHDPro(Base, MicrowaveInterface):
         return TriggerEdge.RISING, newtime
 
     def trigger(self):
-        """ Trigger the next element in the list or sweep mode programmatically.
+        """ Trigger the next frequency in the list or sweep mode programmatically.
 
         @return int: error code (0:OK, -1:error)
 
-        Ensure that the Frequency was set AFTER the function returns, or give
-        the function at least a save waiting time.
+        Ensure that the function returns AFTER the frequency was set, or give
+        the function at least a safe waiting time.
         """
+        if self.current_output_mode == MicrowaveMode.LIST:
+            # Increase the pointer
+            self.freq_ptr = (self.freq_ptr + 1) % len(self.mw_frequency_list)
+            frequency = self.mw_frequency_list[self.freq_ptr] / 1e6
+            self._conn.write(f'f{frequency:.7f}W{self.mw_cw_power:.3f}')
+            # This is just a delay to allow to switch the frequency:
+            freq = float(self._conn.query('f?'))
         return
 
     def _off(self):
