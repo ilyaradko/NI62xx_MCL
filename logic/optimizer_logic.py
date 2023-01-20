@@ -57,6 +57,7 @@ class OptimizerLogic(GenericLogic):
     _sigCompletedXyOptimizerScan = QtCore.Signal()
     _sigDoNextOptimizationStep = QtCore.Signal()
     _sigFinishedAllOptimizationSteps = QtCore.Signal()
+    _sigStartOptimizer = QtCore.Signal(list, str)
 
     # public signals
     sigImageUpdated = QtCore.Signal()
@@ -74,6 +75,7 @@ class OptimizerLogic(GenericLogic):
         self.threadlock = Mutex()
 
         self.stopRequested = False
+        self._full_stop = False
         self.is_crosshair = True
 
         # Keep track of who called the refocus
@@ -129,6 +131,7 @@ class OptimizerLogic(GenericLogic):
 
         self._sigDoNextOptimizationStep.connect(self._do_next_optimization_step, QtCore.Qt.QueuedConnection)
         self._sigFinishedAllOptimizationSteps.connect(self.finish_refocus)
+        self._sigStartOptimizer.connect(self.start_refocus)
         self._initialize_xy_refocus_image()
         self._initialize_z_refocus_image()
         return 0
@@ -238,6 +241,7 @@ class OptimizerLogic(GenericLogic):
         """Stops refocus."""
         with self.threadlock:
             self.stopRequested = True
+            self._full_stop = True
 
     def _initialize_xy_refocus_image(self):
         """Initialisation of the xy refocus image."""
@@ -322,6 +326,7 @@ class OptimizerLogic(GenericLogic):
             with self.threadlock:
                 self.stopRequested = False
                 self.finish_refocus()
+                self._full_stop = False
                 self.sigImageUpdated.emit()
                 self.sigRefocusFinished.emit(
                     self._caller_tag,
@@ -508,6 +513,30 @@ class OptimizerLogic(GenericLogic):
         self.sigRefocusFinished.emit(
             self._caller_tag,
             [self.optim_pos_x, self.optim_pos_y, self.optim_pos_z, 0])
+
+        # Function called by "Stop scan" button - don't loop optimization
+        if self._full_stop:
+            print("Full stop")
+            return
+        # Sleep and refocus again loop
+        # Disable scan buttons in GUI (was enabled by sigRefocusFinished signal)
+        self.sigRefocusStarted.emit('logic')
+        sleep_sec = 600 # Sleep time in seconds
+        self.module_state.lock()  # self.stopRequested only works in locked state
+        while not self.stopRequested and sleep_sec > 0:
+            time.sleep(1)
+            sleep_sec -= 1
+        self.module_state.unlock()
+        if self.stopRequested:
+            with self.threadlock:
+                self.stopRequested = False
+                self._full_stop = False
+            self.sigRefocusFinished.emit(self._caller_tag, [self.optim_pos_x, self.optim_pos_y, self.optim_pos_z, 0])
+            print("Stop requested")
+        else:
+            self._sigStartOptimizer.emit([self.optim_pos_x, self.optim_pos_y, self.optim_pos_z, 0], self._caller_tag)
+            print("Repeat optimization")
+
 
     def _scan_z_line(self):
         """Scans the z line for refocus."""
