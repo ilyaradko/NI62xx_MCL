@@ -92,7 +92,7 @@ class ODMRCounterMicrowaveInterfuse(GenericLogic, ODMRCounterInterface,
         return self._sc_device.set_up_counter(counter_channels=counter_channel,
                                                 sources=photon_source,
                                                 clock_channel=clock_channel,
-                                                counter_buffer=None)
+                                                counter_buffer=None, odmr=True)
 
     def set_odmr_length(self, length=100):
         """Set up the trigger sequence for the ODMR and the triggered microwave.
@@ -272,7 +272,7 @@ class ODMRCounterMicrowaveInterfuse(GenericLogic, ODMRCounterInterface,
 
         @return object: current trigger polarity [TriggerEdge.RISING, TriggerEdge.FALLING]
         """
-        return self._mw_device.set_ext_trigger(pol=pol, timing=timing)
+        return self._mw_device.set_ext_trigger(pol=pol, dwelltime=timing)
 
     def get_limits(self):
         """ Return the device-specific limits in a nested dictionary.
