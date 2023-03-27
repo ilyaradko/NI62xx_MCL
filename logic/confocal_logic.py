@@ -1000,7 +1000,8 @@ class ConfocalLogic(GenericLogic):
             # Return mu from the fit
             return pfit[1] * 1e6  # Convert coordinate to um
         except:
-            return -1
+            # If Gaussian fit fails, return z-coordinate of maximum signal (in um)
+            return x[maxind] * 1e6
 
     def save_xy_data(self, colorscale_range=None, percentile_range=None, block=True):
         """ Save the current confocal xy data to file.
