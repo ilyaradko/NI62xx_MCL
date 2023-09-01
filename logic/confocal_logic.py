@@ -279,7 +279,7 @@ class ConfocalLogic(GenericLogic):
     signal_draw_figure_completed = QtCore.Signal()
     signal_position_changed = QtCore.Signal()
 
-    _signal_save_xy = QtCore.Signal(object, object)
+    _signal_save_xy = QtCore.Signal(object, object, object)
     _signal_save_depth = QtCore.Signal(object, object)
 
     sigImageXYInitialized = QtCore.Signal()
@@ -1003,7 +1003,7 @@ class ConfocalLogic(GenericLogic):
             # If Gaussian fit fails, return z-coordinate of maximum signal (in um)
             return x[maxind] * 1e6
 
-    def save_xy_data(self, colorscale_range=None, percentile_range=None, block=True):
+    def save_xy_data(self, colorscale_range=None, percentile_range=None, block=True, active_channel=None):
         """ Save the current confocal xy data to file.
 
         Two files are created.  The first is the imagedata, which has a text-matrix of count values
@@ -1020,12 +1020,12 @@ class ConfocalLogic(GenericLogic):
         @param: bool block (optional) If False, return immediately; if True, block until save completes."""
 
         if block:
-            self._save_xy_data(colorscale_range, percentile_range)
+            self._save_xy_data(colorscale_range, percentile_range, active_channel)
         else:
-            self._signal_save_xy.emit(colorscale_range, percentile_range)
+            self._signal_save_xy.emit(colorscale_range, percentile_range, active_channel)
 
-    @QtCore.Slot(object, object)
-    def _save_xy_data(self, colorscale_range=None, percentile_range=None):
+    @QtCore.Slot(object, object, object)
+    def _save_xy_data(self, colorscale_range=None, percentile_range=None, active_channel=None):
         """ Execute save operation. Slot for _signal_save_xy.
         """
         self.signal_save_started.emit()
@@ -1056,11 +1056,13 @@ class ConfocalLogic(GenericLogic):
                         self.image_y_range[1]]
         axes = ['X', 'Y']
         crosshair_pos = [self.get_position()[0], self.get_position()[1]]
+        """ Saves all channels with proper cbar_range
+        """
 
         figs = {ch: self.draw_figure(data=self.xy_image[:, :, 3 + n],
                                      image_extent=image_extent,
                                      scan_axis=axes,
-                                     cbar_range=colorscale_range,
+                                     cbar_range=colorscale_range if n == active_channel else None,
                                      percentile_range=percentile_range,
                                      crosshair_pos=crosshair_pos)
                 for n, ch in enumerate(self.get_scanner_count_channels())}
@@ -1240,6 +1242,8 @@ class ConfocalLogic(GenericLogic):
         # If no colorbar range was given, take full range of data
         if cbar_range is None:
             cbar_range = [np.min(data), np.max(data)]
+
+
 
         # Scale color values using SI prefix
         prefix = ['', 'k', 'M', 'G']
