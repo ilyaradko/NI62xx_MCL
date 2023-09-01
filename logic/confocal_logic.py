@@ -1243,8 +1243,6 @@ class ConfocalLogic(GenericLogic):
         if cbar_range is None:
             cbar_range = [np.min(data), np.max(data)]
 
-
-
         # Scale color values using SI prefix
         prefix = ['', 'k', 'M', 'G']
         prefix_count = 0
