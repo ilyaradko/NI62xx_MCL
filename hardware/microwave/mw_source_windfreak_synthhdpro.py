@@ -33,6 +33,12 @@ import time
 class MicrowaveSynthHDPro(Base, MicrowaveInterface):
     """ Hardware class to controls a SynthHD Pro.
 
+    DiamondLab note! Our model SynthHD (not Pro) does not properly support LIST mode. Therefore, this mode is emulated
+    in software, and the trigger to change the MW frequency is emitted programmatically.
+    For this, an odmr_counter_microwave_interfuse.py must be used, which calls trigger() from its count_odmr() function.
+    Note that the LIST mode is activated by odmr_logic.py (by calling self._mw_device.set_list()). Thus the default CW mode
+    is changed to LIST mode by the ODRM logic.
+
     Example config for copy-paste:
 
     mw_source_synthhd:
@@ -354,16 +360,16 @@ class MicrowaveSynthHDPro(Base, MicrowaveInterface):
         self._conn.write('g1')
         return 0
 
-    def set_ext_trigger(self, pol, dwelltime):
+    def set_ext_trigger(self, pol, timing):
         """ Set the external trigger for this device with proper polarization.
 
         @param TriggerEdge pol: polarisation of the trigger (basically rising edge or falling edge)
-        @param dwelltime: minimum dwell time
+        @param timing: minimum dwell time
 
         @return object: current trigger polarity [TriggerEdge.RISING, TriggerEdge.FALLING]
         """
-        self.log.debug('Trigger at {} dwell for {}'.format(pol, dwelltime))
-        self._conn.write('t{0:f}'.format(1000 * 0.75 * dwelltime))
+        self.log.debug('Trigger at {} dwell for {}'.format(pol, timing))
+        self._conn.write('t{0:f}'.format(1000 * 0.75 * timing))
         newtime = float(self._conn.query('t?')) / 1000
         return TriggerEdge.RISING, newtime
 
