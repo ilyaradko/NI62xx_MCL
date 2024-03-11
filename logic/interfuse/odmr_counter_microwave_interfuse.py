@@ -70,6 +70,7 @@ class ODMRCounterMicrowaveInterfuse(GenericLogic, ODMRCounterInterface,
 
         @return int: error code (0:OK, -1:error)
         """
+        print("Setting up ODMR clock")
         return self._sc_device.set_up_clock(clock_frequency=clock_frequency,
                                                    clock_channel=clock_channel)
 
@@ -88,7 +89,7 @@ class ODMRCounterMicrowaveInterfuse(GenericLogic, ODMRCounterInterface,
 
         @return int: error code (0:OK, -1:error)
         """
-
+        print("Setting up ODMR counter")
         return self._sc_device.set_up_counter(counter_channels=counter_channel,
                                                 sources=photon_source,
                                                 clock_channel=clock_channel,
@@ -140,7 +141,7 @@ class ODMRCounterMicrowaveInterfuse(GenericLogic, ODMRCounterInterface,
 
         @return list(str): channels recorded during ODMR measurement
         """
-        return self._sc_device.get_counter_channels()
+        return self._sc_device.get_odmr_channels()
 
     ### ----------- Microwave interface commands -----------
 

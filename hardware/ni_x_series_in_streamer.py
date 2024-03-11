@@ -804,6 +804,7 @@ class NIXSeriesInStreamer(Base, DataInStreamInterface):
                     idle_state=ni.constants.Level.LOW)
                 task.timing.cfg_implicit_timing(
                     sample_mode=ni.constants.AcquisitionType.CONTINUOUS)
+                print(f'Clock: {src}')
             except ni.DaqError:
                 self.log.exception('Error while configuring sample clock task.')
                 try:
@@ -915,6 +916,7 @@ class NIXSeriesInStreamer(Base, DataInStreamInterface):
                     task.timing.cfg_implicit_timing(
                         sample_mode=ni.constants.AcquisitionType.CONTINUOUS,
                         samps_per_chan=self.__buffer_size)
+                    print(f'Counter: {ctr_name}')
                 except ni.DaqError:
                     try:
                         del task

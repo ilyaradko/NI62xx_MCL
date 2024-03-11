@@ -296,6 +296,8 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
                 # equal to count_interval
                 0.5)
 
+            print(f'Set NI clock channel: {my_clock_channel}')
+
             # Configure Implicit Timing.
             # Set timing to continuous, i.e. set only the number of samples to
             # acquire or generate without specifying timing:
@@ -384,6 +386,8 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
                     # empty extra argument
                     '')
 
+                print(f'Set NI counter channel: {ch}')
+
                 # Set the Counter Input to a Semi Period input Terminal.
                 # Connect the pulses from the counter clock to the counter channel
                 daq.DAQmxSetCISemiPeriodTerm(
@@ -393,6 +397,8 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
                         ch,
                         # assign a named Terminal
                         my_clock_channel + 'InternalOutput')
+
+                print(f'Binding counter {ch} to clock {my_clock_channel}')
 
                 # Set a Counter Input Control Timebase Source.
                 # Specify the terminal of the timebase which is used for the counter:
@@ -405,6 +411,8 @@ class NationalInstrumentsXSeries(Base, SlowCounterInterface, ConfocalScannerInte
                     ch,
                     # counter channel to output the counting results
                     my_photon_sources[i])
+
+                print(f'Binding counter {ch} to input {my_photon_sources[i]}')
 
                 # Configure Implicit Timing.
                 # Set timing to continuous, i.e. set only the number of samples to
