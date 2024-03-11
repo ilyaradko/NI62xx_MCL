@@ -68,6 +68,7 @@ class ODMRLogic(GenericLogic):
     lines_to_average = StatusVar('lines_to_average', 0)
     _oversampling = StatusVar('oversampling', default=10)
     _lock_in_active = StatusVar('lock_in_active', default=False)
+    _shuffle_active = StatusVar('shuffle_active', default=True)
 
     # Internal signals
     sigNextLine = QtCore.Signal()
@@ -355,6 +356,12 @@ class ODMRLogic(GenericLogic):
         self.lock_in = active
         return self.lock_in
 
+    def set_shuffle(self, active):
+        self._shuffle_active = active
+        update_dict = {'shuffle': self._shuffle_active}
+        self.sigParameterUpdated.emit(update_dict)
+        return self._shuffle_active
+
     def set_matrix_line_number(self, number_of_lines):
         """
         Sets the number of lines in the ODMR matrix
@@ -500,9 +507,13 @@ class ODMRLogic(GenericLogic):
                 num_steps = int(np.rint((mw_stop - mw_start) / mw_step))
                 end_freq = mw_start + num_steps * mw_step
                 freq_list = np.linspace(mw_start, end_freq, num_steps + 1)
-
                 # adjust the end frequency in order to have an integer multiple of step size
                 # The master module (i.e. GUI) will be notified about the changed end frequency
+
+                # Shuffle frequency list if enabled in settings:
+                if self._shuffle_active:
+                    np.random.shuffle(freq_list)
+
                 final_freq_list.extend(freq_list)
 
                 used_starts.append(mw_start)
