@@ -120,6 +120,8 @@ class ODMRLogic(GenericLogic):
 
         self.frequency_lists = []
         self.final_freq_list = []
+        self.shuffled_list = []  # Shuffled list of frequencies
+        self.shuffle_order = []  # Shuffle order
 
         # Set flags
         # for stopping a measurement
@@ -498,6 +500,7 @@ class ODMRLogic(GenericLogic):
         limits = self.get_hw_constraints()
         param_dict = {}
         self.final_freq_list = []
+        self.shuffled_list = []
         if self.mw_scanmode == MicrowaveMode.LIST:
             final_freq_list = []
             used_starts = []
@@ -510,17 +513,24 @@ class ODMRLogic(GenericLogic):
                 # adjust the end frequency in order to have an integer multiple of step size
                 # The master module (i.e. GUI) will be notified about the changed end frequency
 
+                final_freq_list.extend(freq_list)
+
                 # Shuffle frequency list if enabled in settings:
                 if self._shuffle_active:
                     np.random.shuffle(freq_list)
-
-                final_freq_list.extend(freq_list)
+                    self.shuffled_list.extend(freq_list)
 
                 used_starts.append(mw_start)
                 used_steps.append(mw_step)
                 used_stops.append(end_freq)
 
-            final_freq_list = np.array(final_freq_list)
+            if self._shuffle_active:
+                self.shuffled_list = np.array(self.shuffled_list)
+                self.shuffle_order = np.argsort(self.shuffled_list)
+                final_freq_list = self.shuffled_list
+            else:
+                final_freq_list = np.array(final_freq_list)
+
             if len(final_freq_list) >= limits.list_maxentries:
                 self.log.error('Number of frequency steps too large for microwave device.')
                 mode, is_running = self._mw_device.get_status()
@@ -529,7 +539,7 @@ class ODMRLogic(GenericLogic):
             freq_list, self.sweep_mw_power, mode = self._mw_device.set_list(final_freq_list,
                                                                             self.sweep_mw_power)
 
-            self.final_freq_list = np.array(freq_list)
+            self.final_freq_list = np.sort(freq_list)  # Must be sorted, since do_fit() and gui.update_plots() rely on that
             self.mw_starts = used_starts
             self.mw_stops = used_stops
             self.mw_steps = used_steps
@@ -772,6 +782,10 @@ class ODMRLogic(GenericLogic):
 
             # Acquire count data
             error, new_counts = self._odmr_counter.count_odmr(length=self.odmr_plot_x.size)
+
+            # Return counts as if the frequency list was ordered
+            if self._shuffle_active:
+                new_counts = new_counts[:,self.shuffle_order]
 
             if error:
                 self.stopRequested = True
