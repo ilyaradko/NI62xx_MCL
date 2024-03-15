@@ -118,7 +118,7 @@ class ODMRCounterMicrowaveInterfuse(GenericLogic, ODMRCounterInterface,
         # self.trigger()
         for i in range(length):
             self.trigger()
-            counts[:, i] = self._sc_device.get_counter(samples=1)[0]
+            counts[:, i] = self._sc_device.get_counter(samples=1)[:, 0]
         self.trigger()
         return False, counts
 
@@ -141,7 +141,7 @@ class ODMRCounterMicrowaveInterfuse(GenericLogic, ODMRCounterInterface,
 
         @return list(str): channels recorded during ODMR measurement
         """
-        return self._sc_device.get_odmr_channels()
+        return self._sc_device.get_counter_channels()
 
     ### ----------- Microwave interface commands -----------
 
